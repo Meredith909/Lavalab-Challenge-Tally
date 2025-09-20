@@ -1,0 +1,16 @@
+external_id,channel,customer_name,sku,qty
+SH-12345,Shopify,John Smith,CT-RED-M,2
+SH-12345,Shopify,John Smith,CT-BLUE-L,1
+ET-67890,Etsy,Sarah Johnson,CT-BLACK-S,3
+ET-67890,Etsy,Sarah Johnson,CT-WHITE-M,1
+MAN-001,Manual,Mike Wilson,CT-RED-L,2
+SH-54321,Shopify,Emily Davis,CT-GREEN-M,1
+SH-54321,Shopify,Emily Davis,CT-BLUE-S,2
+AMZ-11111,Amazon,Robert Brown,CT-BLACK-L,1
+ET-22222,Etsy,Lisa Garcia,CT-WHITE-S,4
+ET-22222,Etsy,Lisa Garcia,CT-RED-M,1
+MAN-002,Manual,David Martinez,CT-BLUE-M,2
+SH-99999,Shopify,Jennifer Lopez,CT-GREEN-L,1
+SH-99999,Shopify,Jennifer Lopez,CT-BLACK-M,1
+SH-99999,Shopify,Jennifer Lopez,CT-WHITE-L,2
+

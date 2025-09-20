@@ -4,20 +4,21 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function Home() {
-  const router = useRouter()
+interface AuthGuardProps {
+  children: React.ReactNode
+}
+
+export function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading } = useAuth()
-  
+  const router = useRouter()
+
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.push('/materials')
-      } else {
-        router.push('/login')
-      }
+    if (!loading && !user) {
+      router.push('/login')
     }
   }, [user, loading, router])
 
+  // Show loading while checking auth
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -29,5 +30,12 @@ export default function Home() {
     )
   }
 
-  return null
+  // Show nothing if not authenticated (will redirect)
+  if (!user) {
+    return null
+  }
+
+  // Show protected content if authenticated
+  return <>{children}</>
 }
+
