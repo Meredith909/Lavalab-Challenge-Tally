@@ -60,10 +60,8 @@ export default function RootLayout({
   children: React.ReactNode; // TypeScript: children can be any valid React content
 }>) {
   return (
-    // Basic HTML structure - this is the foundation of every web page
-    <html lang="en"> {/* lang="en" helps screen readers and search engines */}
+    <html lang="en">
       <body
-        // Apply our custom fonts and make text look smooth
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {/* 
