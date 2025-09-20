@@ -1,28 +1,50 @@
-"use client"
+// ============================================================================
+// SIDEBAR COMPONENT - The Main Navigation Hub
+// ============================================================================
+// This is the left sidebar that appears on every page (except login)
+// It handles navigation, user profile, logout, and can collapse/expand
 
+"use client" // Runs in browser because it needs to track UI state and handle clicks
+
+// Import React hooks for managing component state and side effects
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { 
-  LogOut, 
-  Menu,
-  X,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import Image from 'next/image'
-import { useSidebar } from '@/contexts/SidebarContext'
-import { useAuth } from '@/contexts/AuthContext'
 
+// Import Next.js components for navigation and images
+import Link from 'next/link'           // For client-side navigation between pages
+import { usePathname } from 'next/navigation' // To know which page we're currently on
+import Image from 'next/image'         // Optimized image component
+
+// Import icons from Lucide React (a popular icon library)
+import { 
+  LogOut,      // Logout icon (not used, we use custom Frame.png)
+  Menu,        // Hamburger menu icon for mobile
+  X,           // Close icon for mobile menu
+  ChevronLeft, // Left arrow for collapse button
+  ChevronRight // Right arrow for expand button
+} from 'lucide-react'
+
+// Import our custom UI components
+import { Button } from '@/components/ui/button' // Reusable button component
+
+// Import utility function for combining CSS classes conditionally
+import { cn } from '@/lib/utils'
+
+// Import our custom context hooks
+import { useSidebar } from '@/contexts/SidebarContext' // For collapse/expand state
+import { useAuth } from '@/contexts/AuthContext'       // For user info and logout
+
+// ============================================================================
+// NAVIGATION CONFIGURATION
+// ============================================================================
+// This array defines all the pages in our app and their icons
+// Each page has both active and inactive icon states for better UX
 const navigation = [
   { 
-    name: 'Materials', 
-    href: '/materials', 
+    name: 'Materials',           // Display name
+    href: '/materials',          // URL path
     icon: {
-      active: '/Icons/Property 1=Components - Active.png',
-      inactive: '/Icons/Property 1=Components - Inactive.png'
+      active: '/Icons/Property 1=Components - Active.png',     // Icon when page is selected
+      inactive: '/Icons/Property 1=Components - Inactive.png'  // Icon when page is not selected
     }
   },
   { 
@@ -51,15 +73,39 @@ const navigation = [
   },
 ]
 
+// ============================================================================
+// MAIN SIDEBAR COMPONENT
+// ============================================================================
 export function Sidebar() {
+  // ========================================================================
+  // STATE MANAGEMENT
+  // ========================================================================
+  
+  // Mobile menu state - whether the sidebar is open on mobile devices
   const [isOpen, setIsOpen] = useState(false)
+  
+  // Get collapse state and function from our sidebar context
+  // isCollapsed: true = 48px wide, false = 200px wide
   const { isCollapsed, setIsCollapsed } = useSidebar()
+  
+  // Get the signOut function from our authentication context
   const { signOut } = useAuth()
+  
+  // Track whether component has mounted (prevents hydration errors)
+  // This ensures server-rendered HTML matches client-rendered HTML
   const [mounted, setMounted] = useState(false)
+  
+  // Get the current page path (e.g., "/materials", "/products")
+  // This is used to highlight the active navigation item
   const pathname = usePathname()
 
+  // ========================================================================
+  // HYDRATION FIX
+  // ========================================================================
+  // This useEffect runs after the component mounts on the client
+  // It prevents mismatches between server and client rendering
   useEffect(() => {
-    setMounted(true)
+    setMounted(true) // Mark as mounted so we can safely use pathname
   }, [])
 
   const sidebarContent = (

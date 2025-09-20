@@ -1,9 +1,40 @@
+// ============================================================================
+// SUPABASE CLIENT CONFIGURATION - Database Connection Setup
+// ============================================================================
+// This file creates the connection to our Supabase database
+// Supabase is a "Backend-as-a-Service" that provides:
+// - PostgreSQL database with real-time subscriptions
+// - Authentication system with JWT tokens
+// - Row Level Security for data protection
+// - Automatic API generation from database schema
+
+// Import the Supabase client library
 import { createClient } from '@supabase/supabase-js'
 
+// ============================================================================
+// ENVIRONMENT VARIABLES - Configuration from .env.local
+// ============================================================================
+// These values come from your .env.local file and are loaded by Next.js
+// The NEXT_PUBLIC_ prefix makes them available in the browser (client-side)
+
+// Your Supabase project URL (e.g., https://your-project.supabase.co)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+
+// Your Supabase anonymous key (safe to use in browser, has limited permissions)
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
+// ============================================================================
+// CREATE AND EXPORT SUPABASE CLIENT
+// ============================================================================
+// This creates a single instance of the Supabase client that's used throughout the app
+// All components import this same instance to ensure consistent database connections
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// How this client is used throughout the app:
+// - Authentication: supabase.auth.signIn(), supabase.auth.signOut()
+// - Database queries: supabase.from('materials').select('*')
+// - Real-time subscriptions: supabase.channel().on('postgres_changes')
+// - File uploads: supabase.storage.from('bucket').upload()
 
 export type Database = {
   public: {

@@ -1,97 +1,187 @@
-"use client"
+// ============================================================================
+// MATERIALS PAGE - Inventory Management Hub
+// ============================================================================
+// This page handles all materials (raw inventory) management including:
+// - Viewing all materials with search and filtering
+// - Adding new materials with SKU, variants, and reorder points
+// - Real-time stock level adjustments with optimistic UI updates
+// - Low stock warnings when inventory falls below reorder points
+// - Navigation between Materials overview and Blanks detail view
 
-import { useState, useEffect } from 'react'
+"use client" // Runs in browser because it needs to manage state and make API calls
+
+// ========================================================================
+// REACT AND UI IMPORTS
+// ========================================================================
+import { useState, useEffect } from 'react' // React hooks for state and side effects
+
+// Import icons from Lucide React
 import { Plus, Search, Package, Minus, Filter, ArrowUpDown } from 'lucide-react'
-import { AuthGuard } from '@/components/AuthGuard'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { supabase } from '@/lib/supabase'
-import { toast } from 'sonner'
-import Link from 'next/link'
 
+// Import our custom components
+import { AuthGuard } from '@/components/AuthGuard'     // Protects this page from unauthenticated users
+import { Button } from '@/components/ui/button'        // Reusable button component
+import { Input } from '@/components/ui/input'          // Text input component
+import { Badge } from '@/components/ui/badge'          // For status indicators
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog' // Modal dialogs
+
+// ========================================================================
+// DATABASE AND UTILITIES
+// ========================================================================
+import { supabase } from '@/lib/supabase'  // Database client for CRUD operations
+import { toast } from 'sonner'             // Toast notifications for user feedback
+import Link from 'next/link'               // Next.js navigation component
+
+// ========================================================================
+// TYPESCRIPT INTERFACE - MATERIAL DATA STRUCTURE
+// ========================================================================
+// This defines exactly what a Material object looks like in our database
+// TypeScript uses this to catch errors and provide auto-completion
 interface Material {
-  id: string
-  name: string
-  variant: string | null
-  sku: string
-  on_hand: number
-  reorder_point: number
-  cost: number | null
-  archived: boolean
-  created_at: string
+  id: string              // Unique identifier (UUID from database)
+  name: string            // Material name (e.g., "T-shirt")
+  variant: string | null  // Optional variant (e.g., "Red", "Size M")
+  sku: string             // Stock Keeping Unit - unique product code
+  on_hand: number         // Current quantity in stock
+  reorder_point: number   // When to reorder (low stock warning threshold)
+  cost: number | null     // Optional cost per unit
+  archived: boolean       // Whether this material is deleted (soft delete)
+  created_at: string      // When this material was created
 }
 
+// ============================================================================
+// MAIN MATERIALS PAGE COMPONENT
+// ============================================================================
 export default function MaterialsPage() {
+  // ========================================================================
+  // STATE MANAGEMENT
+  // ========================================================================
+  
+  // All materials loaded from the database
   const [materials, setMaterials] = useState<Material[]>([])
+  
+  // Materials that match the current search query
+  // This is what actually gets displayed to the user
   const [filteredMaterials, setFilteredMaterials] = useState<Material[]>([])
+  
+  // What the user typed in the search box
   const [searchQuery, setSearchQuery] = useState('')
+  
+  // Whether the "Add Material" dialog is currently open
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  
+  // Whether we're still loading materials from the database
+  // Used to show loading spinner instead of empty state
   const [loading, setLoading] = useState(true)
+  
+  // Navigation state: 'materials' = overview, 'blanks' = detail view
   const [currentView, setCurrentView] = useState<'materials' | 'blanks'>('blanks')
+  
+  // Tab state within blanks view: 'inventory' or 'order-queue'
   const [currentTab, setCurrentTab] = useState<'inventory' | 'order-queue'>('inventory')
 
-  // Load materials on mount
+  // ========================================================================
+  // SIDE EFFECTS (useEffect hooks)
+  // ========================================================================
+  
+  // EFFECT 1: Load materials when the page first loads
   useEffect(() => {
-    loadMaterials()
-  }, [])
+    loadMaterials() // Fetch all materials from database
+  }, []) // Empty dependency array = run only once when component mounts
 
-  // Filter materials when search query changes
+  // EFFECT 2: Filter materials whenever search query or materials list changes
   useEffect(() => {
     if (!searchQuery.trim()) {
+      // No search query = show all materials
       setFilteredMaterials(materials)
     } else {
+      // Search query exists = filter materials
       const query = searchQuery.toLowerCase()
       const filtered = materials.filter(material => 
+        // Search in material name (e.g., "T-shirt")
         material.name.toLowerCase().includes(query) ||
+        // Search in SKU (e.g., "TSH-RED-M")
         material.sku.toLowerCase().includes(query) ||
+        // Search in variant (e.g., "Red", "Size M")
         material.variant?.toLowerCase().includes(query)
       )
       setFilteredMaterials(filtered)
     }
-  }, [searchQuery, materials])
+  }, [searchQuery, materials]) // Re-run when search query or materials change
 
+  // ========================================================================
+  // DATABASE FUNCTIONS
+  // ========================================================================
+  
+  /**
+   * LOAD MATERIALS FROM DATABASE
+   * This function fetches all non-archived materials from Supabase
+   * and updates our local state with the results
+   */
   const loadMaterials = async () => {
     try {
+      // Make a database query using Supabase client
       const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .eq('archived', false)
-        .order('created_at', { ascending: false })
+        .from('materials')                           // Table name
+        .select('*')                                 // Get all columns
+        .eq('archived', false)                       // Only non-deleted materials
+        .order('created_at', { ascending: false })   // Newest first
 
+      // Check if the database returned an error
       if (error) throw error
-      setMaterials(data || [])
+      
+      // Update our state with the fetched materials
+      setMaterials(data || []) // Use empty array if data is null
     } catch (error) {
+      // Log error for debugging
       console.error('Error loading materials:', error)
+      
+      // Show user-friendly error message
       toast.error('Failed to load materials')
     } finally {
+      // Always stop the loading spinner, whether success or error
       setLoading(false)
     }
   }
 
+  /**
+   * UPDATE MATERIAL QUANTITY - WITH OPTIMISTIC UI
+   * This function demonstrates "optimistic updates" - a key UX pattern
+   * 
+   * How it works:
+   * 1. Update the UI immediately (user sees change right away)
+   * 2. Send the update to the database in the background
+   * 3. If database fails, revert the UI change
+   * 
+   * This makes the app feel instant even on slow networks!
+   */
   const updateQuantity = async (materialId: string, newQuantity: number) => {
-    // Optimistic update
+    // STEP 1: OPTIMISTIC UPDATE - Change UI immediately
     const updatedMaterials = materials.map(material => 
       material.id === materialId 
-        ? { ...material, on_hand: newQuantity }
-        : material
+        ? { ...material, on_hand: newQuantity }  // Update this material
+        : material                               // Keep other materials unchanged
     )
-    setMaterials(updatedMaterials)
+    setMaterials(updatedMaterials) // Apply the change to UI
 
     try {
+      // STEP 2: SYNC WITH DATABASE - Send change to server
       const { error } = await supabase
-        .from('materials')
-        .update({ on_hand: newQuantity })
-        .eq('id', materialId)
+        .from('materials')                    // Table name
+        .update({ on_hand: newQuantity })     // Set new quantity
+        .eq('id', materialId)                 // For this specific material
 
       if (error) throw error
+      
+      // SUCCESS: Show confirmation to user
       toast.success('Quantity updated')
     } catch (error) {
+      // STEP 3: ERROR HANDLING - Revert the optimistic update
       console.error('Error updating quantity:', error)
       toast.error('Failed to update quantity')
-      // Revert optimistic update
-      loadMaterials()
+      
+      // Reload materials from database to get the correct state
+      loadMaterials() // This will overwrite our optimistic update
     }
   }
 
